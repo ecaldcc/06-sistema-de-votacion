@@ -162,7 +162,7 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Verificar tipo de usuario si se especificó
+    // Verificar tipo de usuario si se especifico
     if (userType && userType === 'admin' && user.role !== 'admin') {
       return res.status(403).json({
         success: false,
@@ -213,7 +213,7 @@ router.get('/verify', authMiddleware, async (req, res) => {
   });
 });
 
-// Cerrar sesión (opcional - del lado del cliente se elimina el token)
+// Cerrar sesion del lado del cliente se elimina el token
 router.post('/logout', authMiddleware, async (req, res) => {
   res.json({
     success: true,
