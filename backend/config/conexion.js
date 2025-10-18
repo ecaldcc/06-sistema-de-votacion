@@ -1,21 +1,12 @@
 import mongoose from 'mongoose';
 
-/**
- * Configuración de conexión a MongoDB Atlas
- * Maneja la conexión a la base de datos con opciones optimizadas para producción
- */
 
-// Opciones de conexión optimizadas
 const options = {
-  // Opciones recomendadas para Mongoose 7.x
   serverSelectionTimeoutMS: 5000, // Timeout si no puede conectar al servidor
   socketTimeoutMS: 45000, // Timeout para operaciones individuales
 };
 
-/**
- * Conecta a MongoDB Atlas
- * @returns {Promise<void>}
- */
+
 const connectDB = async () => {
   try {
     // Obtener URI de las variables de entorno
@@ -50,14 +41,14 @@ const connectDB = async () => {
     // Manejador de cierre graceful
     process.on('SIGINT', async () => {
       await mongoose.connection.close();
-      console.log('🔌 MongoDB desconectado por cierre de aplicación');
+      console.log('MongoDB desconectado por cierre de aplicacion');
       process.exit(0);
     });
 
   } catch (error) {
     console.error(' Error al conectar a MongoDB:', error.message);
     
-    // En desarrollo, mostrar más detalles
+    // En desarrollo, mostrar mas detalles
     if (process.env.NODE_ENV === 'development') {
       console.error('Stack trace:', error.stack);
     }
@@ -84,7 +75,7 @@ export const disconnectDB = async () => {
     await mongoose.connection.close();
     console.log(' Conexion a MongoDB cerrada correctamente');
   } catch (error) {
-    console.error('Error al cerrar conexión:', error.message);
+    console.error('Error al cerrar conexion:', error.message);
     throw error;
   }
 };
