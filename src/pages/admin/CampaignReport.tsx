@@ -154,9 +154,9 @@ const CampaignReport: React.FC = () => {
 
   const getParticipationRate = () => {
     if (!report) return 0;
-    // Asumiendo que tienes el total de votantes registrados
-    // Por ahora calculamos basado en los votos emitidos
-    return 100; // Puedes ajustar esta lógica
+    //cuando tengamos el total de votantes lo ponemos aca
+    // Py lo calculamos basado en los votos emitidos
+    return 100; // ahora solo mostrara el 100%
   };
 
   const handlePrint = () => {

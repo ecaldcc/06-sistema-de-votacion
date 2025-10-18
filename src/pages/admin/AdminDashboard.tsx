@@ -73,7 +73,7 @@ const AdminDashboard: React.FC = () => {
   };
 
   const handleDeleteCampaign = async (id: string) => {
-    if (!window.confirm('¿Está seguro de eliminar esta campaña? Esta acción no se puede deshacer.')) {
+    if (!window.confirm('¿Esta seguro de eliminar esta campaña? Esta accion no se puede deshacer.')) {
       return;
     }
 
@@ -169,7 +169,7 @@ const AdminDashboard: React.FC = () => {
 
         {/* Lista de campañas */}
         <div className="campaigns-management">
-          <h2><i className="fas fa-list"></i> Gestión de Campañas</h2>
+          <h2><i className="fas fa-list"></i> Gestion de Campañas</h2>
 
           {report && report.campaigns.length === 0 ? (
             <div className="no-data">
