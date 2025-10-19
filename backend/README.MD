@@ -180,7 +180,7 @@ json{
           "_id": "65def789...",
           "nombre": "Ing. Henry Peak",
           "foto": "https://via.placeholder.com/150",
-          "propuestas": "Modernización de procesos...",
+          "propuestas": "Modernizacion de procesos...",
           "votos": 25
         }
       ]
@@ -199,7 +199,7 @@ json{
   "success": true,
   "campaign": {
     "_id": "65def456...",
-    "titulo": "Elección Junta Directiva 2025",
+    "titulo": "Eleccion Junta Directiva 2025",
     "descripcion": "Elección de la nueva Junta Directiva...",
     "estado": "habilitada",
     "fechaInicio": "2024-01-15T00:00:00.000Z",
@@ -211,7 +211,7 @@ json{
 }
 
 # GET /api/campaigns/:id/voted
-Verificar si el usuario actual ya votó en una campaña.
+Verificar si el usuario actual ya voto en una campaña.
 Response 200:
 json{
   "success": true,
@@ -220,3 +220,5 @@ json{
 }
 
 ## El backend del sistema esta completo, por lo que el JWT_EXPIRATION esta configurado para 5 minutos
+# URL
+https://votacion-backend-w7t6.onrender.com
