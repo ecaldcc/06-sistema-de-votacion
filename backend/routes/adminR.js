@@ -9,7 +9,7 @@ import { authMiddleware, adminMiddleware } from '../middleware/auth-jwt.js';
 // Todas las rutas requieren autenticación y permisos de admin
 router.use(authMiddleware, adminMiddleware);
 
-// ========== GESTIÓN DE CAMPAÑAS ==========
+// ========== GESTION DE CAMPAÑAS ==========
 
 // Crear campaña
 router.post('/campaigns', async (req, res) => {

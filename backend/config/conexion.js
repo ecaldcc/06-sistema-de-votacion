@@ -29,7 +29,7 @@ const connectDB = async () => {
     console.log(` MongoDB conectado: ${conn.connection.host}`);
     console.log(` Base de datos: ${conn.connection.name}`);
 
-    // Event listeners para el estado de la conexión
+    // listener para ver e;l estado de la conexion
     mongoose.connection.on('disconnected', () => {
       console.log(' MongoDB desconectado');
     });
@@ -38,7 +38,7 @@ const connectDB = async () => {
       console.error(' Error en MongoDB:', err.message);
     });
 
-    // Manejador de cierre graceful
+    //desconectarse por cierre
     process.on('SIGINT', async () => {
       await mongoose.connection.close();
       console.log('MongoDB desconectado por cierre de aplicacion');
@@ -59,7 +59,7 @@ const connectDB = async () => {
 };
 
 /**
- * Verifica si la conexión está activa
+ * verificar si esta o no activa la conexion
  * @returns {boolean}
  */
 export const isConnected = () => {
@@ -67,7 +67,7 @@ export const isConnected = () => {
 };
 
 /**
- * Cierra la conexión a MongoDB
+ * cerrar la conexion a MongoDB
  * @returns {Promise<void>}
  */
 export const disconnectDB = async () => {

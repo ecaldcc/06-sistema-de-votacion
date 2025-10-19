@@ -31,7 +31,7 @@ router.post('/', authMiddleware, voterMiddleware, async (req, res) => {
     if (campaign.estado !== 'habilitada') {
       return res.status(400).json({
         success: false,
-        message: 'Esta campaña no está habilitada para votación.'
+        message: 'Esta campaña no esta habilitada para votacion.'
       });
     }
 

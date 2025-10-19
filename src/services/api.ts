@@ -4,7 +4,6 @@ import axios, { AxiosError, type AxiosInstance } from 'axios';
 // 
 const API_URL = import.meta.env.VITE_API_URL || 'https://votacion-backend-w7t6.onrender.com/api';
 
-// Resto del código igual...
 const api: AxiosInstance = axios.create({
   baseURL: API_URL,
   headers: {

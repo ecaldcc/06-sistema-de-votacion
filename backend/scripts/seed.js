@@ -19,7 +19,7 @@ import Vote from '../models/vote.js';
 
 const seedDatabase = async () => {
   try {
-    console.log('🌱 Iniciando seed de base de datos...\n');
+    console.log('Iniciando seed de base de datos...\n');
 
     // Conectar a MongoDB
     await connectDB();
