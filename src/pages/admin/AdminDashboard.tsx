@@ -26,7 +26,6 @@ interface Report {
 const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
   const [report, setReport] = useState<Report | null>(null);
-  const [loading, setLoading] = useState(true);
   const [userName, setUserName] = useState('');
 
   useEffect(() => {
@@ -35,15 +34,21 @@ const AdminDashboard: React.FC = () => {
     setUserName(name);
   }, []);
 
+  // Actualización automática cada 5 segundos
+  useEffect(() => {
+    const interval = setInterval(() => {
+      loadReport();
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, []);
+
   const loadReport = async () => {
     try {
-      setLoading(true);
       const response = await adminAPI.getGeneralReport();
       setReport(response.report);
     } catch (error) {
       console.error('Error al cargar reporte:', error);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -85,7 +90,6 @@ const AdminDashboard: React.FC = () => {
       alert(error.response?.data?.message || 'Error al eliminar campaña');
     }
   };
-
 
   return (
     <div className="admin-dashboard">
@@ -191,7 +195,6 @@ const AdminDashboard: React.FC = () => {
                         <td>
                           <div className="campaign-title">
                             <strong>{campaign.titulo}</strong>
-                            {/* CORRECCIÓN: Verificar que existe descripcion antes de substring */}
                             <small>
                               {campaign.descripcion 
                                 ? (campaign.descripcion.length > 50 

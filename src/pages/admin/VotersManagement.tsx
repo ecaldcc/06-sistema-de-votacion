@@ -19,7 +19,7 @@ const VotersManagement: React.FC = () => {
   const navigate = useNavigate();
   const [voters, setVoters] = useState<Voter[]>([]);
   const [filteredVoters, setFilteredVoters] = useState<Voter[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all');
   const [sortBy, setSortBy] = useState<'name' | 'date' | 'votes'>('name');
@@ -120,14 +120,7 @@ const VotersManagement: React.FC = () => {
 
   const stats = getStats();
 
-  if (loading) {
-    return (
-      <div className="loading-container">
-        <div className="spinner"></div>
-        <p>Cargando votantes...</p>
-      </div>
-    );
-  }
+ 
 
   return (
     <div className="voters-management-page">

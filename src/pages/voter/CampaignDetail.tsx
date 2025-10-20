@@ -41,7 +41,6 @@ const CampaignDetail: React.FC = () => {
   const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [hasVoted, setHasVoted] = useState(false);
   const [selectedCandidate, setSelectedCandidate] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
   const [voting, setVoting] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState('');
 
@@ -50,6 +49,17 @@ const CampaignDetail: React.FC = () => {
       loadCampaignData();
     }
   }, [id]);
+
+  // Actualización automática cada 3 segundos
+  useEffect(() => {
+    if (id && campaign?.estado === 'habilitada') {
+      const interval = setInterval(() => {
+        loadCampaignData();
+      }, 3000);
+
+      return () => clearInterval(interval);
+    }
+  }, [id, campaign?.estado]);
 
   useEffect(() => {
     if (campaign && campaign.estado === 'habilitada') {
@@ -63,7 +73,6 @@ const CampaignDetail: React.FC = () => {
 
   const loadCampaignData = async () => {
     try {
-      setLoading(true);
       const [campaignRes, votedRes] = await Promise.all([
         campaignsAPI.getById(id!),
         campaignsAPI.checkVoted(id!)
@@ -73,8 +82,6 @@ const CampaignDetail: React.FC = () => {
       setHasVoted(votedRes.hasVoted);
     } catch (error) {
       console.error('Error al cargar campaña:', error);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -116,7 +123,7 @@ const CampaignDetail: React.FC = () => {
         candidateId: selectedCandidate
       });
 
-      alert('¡Voto registrado exitosamente!');
+      alert('¡Voto registrado exitosamente :) !');
       await loadCampaignData();
     } catch (error: any) {
       console.error('Error al votar:', error);
@@ -164,7 +171,7 @@ const CampaignDetail: React.FC = () => {
       },
       title: {
         display: true,
-        text: 'Resultados de Votación',
+        text: 'Resultados de Votacion',
         font: {
           size: 18,
           weight: 'bold' as const
@@ -180,15 +187,6 @@ const CampaignDetail: React.FC = () => {
       },
     },
   };
-
-  if (loading) {
-    return (
-      <div className="loading-container">
-        <div className="spinner"></div>
-        <p>Cargando campaña...</p>
-      </div>
-    );
-  }
 
   if (!campaign) {
     return (
@@ -217,7 +215,7 @@ const CampaignDetail: React.FC = () => {
       </div>
 
       <div className="detail-container">
-        {/* Información de la campaña */}
+        {/* Informacion de la campaña */}
         <div className="campaign-info-section">
           <div className="info-card">
             <h3><i className="fas fa-info-circle"></i> Descripción</h3>
@@ -266,7 +264,7 @@ const CampaignDetail: React.FC = () => {
           )}
         </div>
 
-        {/* Gráfico de resultados */}
+        {/* Grafico de resultados */}
         <div className="chart-section">
           <div className="chart-container">
             {getChartData() && <Bar data={getChartData()!} options={chartOptions} />}
@@ -319,7 +317,7 @@ const CampaignDetail: React.FC = () => {
             ))}
           </div>
 
-          {/* Botón de votación */}
+          {/* Boton de votacion */}
           {!hasVoted && campaign.estado === 'habilitada' && (
             <div className="vote-action">
               <button

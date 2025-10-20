@@ -34,7 +34,7 @@ const CampaignForm: React.FC = () => {
   const [editingCandidateIndex, setEditingCandidateIndex] = useState<number | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
-  const [loadingData, setLoadingData] = useState(isEditing);
+  const [, setLoadingData] = useState(isEditing);
 
   useEffect(() => {
     if (isEditing) {
@@ -166,14 +166,7 @@ const CampaignForm: React.FC = () => {
     }
   };
 
-  if (loadingData) {
-    return (
-      <div className="loading-container">
-        <div className="spinner"></div>
-        <p>Cargando datos...</p>
-      </div>
-    );
-  }
+  
 
   return (
     <div className="campaign-form-page">

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { adminAPI, authAPI } from '../../services/api';
+import { adminAPI } from '../../services/api';
 import { useState, useEffect } from 'react';
 import '../../styles/AdminDashboard.scss';
 
@@ -16,7 +16,6 @@ interface Report {
 const GeneralReport: React.FC = () => {
   const navigate = useNavigate();
   const [report, setReport] = useState<Report | null>(null);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadReport();
@@ -28,14 +27,10 @@ const GeneralReport: React.FC = () => {
       setReport(response.report);
     } catch (error) {
       console.error('Error:', error);
-    } finally {
-      setLoading(false);
     }
   };
 
   const handlePrint = () => window.print();
-
-  if (loading) return <div className="loading-container"><div className="spinner"></div></div>;
 
   return (
     <div className="admin-dashboard">
@@ -57,7 +52,7 @@ const GeneralReport: React.FC = () => {
       </nav>
 
       <div className="dashboard-container">
-        <h1> Reporte General del Sistema</h1>
+        <h1>Reporte General del Sistema</h1>
 
         {report && (
           <>
@@ -92,7 +87,7 @@ const GeneralReport: React.FC = () => {
               </div>
             </div>
 
-            <h2> Campañas</h2>
+            <h2>Campañas</h2>
             <table>
               <thead>
                 <tr>

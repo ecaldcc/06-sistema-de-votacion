@@ -39,26 +39,42 @@ const CampaignReport: React.FC = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [report, setReport] = useState<Report | null>(null);
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [totalVoters, setTotalVoters] = useState(0);
 
   useEffect(() => {
     if (id) {
       loadReport();
+      loadTotalVoters();
     }
   }, [id]);
 
+  // Actualizacion automatica cada 5 segundos
+  useEffect(() => {
+    if (id && report?.campaign.estado === 'habilitada') {
+      const interval = setInterval(() => {
+        loadReport();
+      }, 5000); // Actualiza cada 5 segundos
+
+      return () => clearInterval(interval);
+    }
+  }, [id, report?.campaign.estado]);
+
   const loadReport = async () => {
     try {
-      setLoading(true);
       const response = await adminAPI.getCampaignReport(id!);
       setReport(response.report);
     } catch (error) {
       console.error('Error al cargar reporte:', error);
-      alert('Error al cargar el reporte');
-      navigate('/admin/dashboard');
-    } finally {
-      setLoading(false);
+    }
+  };
+
+  const loadTotalVoters = async () => {
+    try {
+      const response = await adminAPI.getVoters();
+      setTotalVoters(response.voters.length);
+    } catch (error) {
+      console.error('Error al cargar votantes:', error);
     }
   };
 
@@ -153,10 +169,11 @@ const CampaignReport: React.FC = () => {
   };
 
   const getParticipationRate = () => {
-    if (!report) return 0;
-    //cuando tengamos el total de votantes lo ponemos aca
-    // Py lo calculamos basado en los votos emitidos
-    return 100; // ahora solo mostrara el 100%
+    if (!report || totalVoters === 0) return 0;
+    
+    // Calcular el porcentaje de votantes unicos que participaron
+    const uniqueVoters = new Set(report.votes.map(vote => vote.numeroColegiado)).size;
+    return ((uniqueVoters / totalVoters) * 100).toFixed(1);
   };
 
   const handlePrint = () => {
@@ -167,15 +184,6 @@ const CampaignReport: React.FC = () => {
     vote.voter.toLowerCase().includes(searchTerm.toLowerCase()) ||
     vote.numeroColegiado.includes(searchTerm)
   ) || [];
-
-  if (loading) {
-    return (
-      <div className="loading-container">
-        <div className="spinner"></div>
-        <p>Cargando reporte...</p>
-      </div>
-    );
-  }
 
   if (!report) {
     return (
@@ -210,7 +218,7 @@ const CampaignReport: React.FC = () => {
       </div>
 
       <div className="report-container">
-        {/* Información de la campaña */}
+        {/* Informacion de la campaña */}
         <div className="campaign-info-card">
           <div className="info-header">
             <h2>{report.campaign.titulo}</h2>
@@ -231,7 +239,7 @@ const CampaignReport: React.FC = () => {
           </div>
         </div>
 
-        {/* Estadísticas principales */}
+        {/* Estadisticas principales */}
         <div className="stats-section">
           <div className="stat-box blue">
             <div className="stat-icon">
@@ -284,7 +292,7 @@ const CampaignReport: React.FC = () => {
               <div className="winner-info">
                 {winner.nombre === 'Empate' ? (
                   <>
-                    <h3>Empate Técnico</h3>
+                    <h3>Empate Tecnico</h3>
                     <p>Multiples candidatos con {winner.votos} votos</p>
                   </>
                 ) : (
@@ -302,14 +310,14 @@ const CampaignReport: React.FC = () => {
         {/* Gráficos */}
         <div className="charts-section">
           <div className="chart-card">
-            <h3><i className="fas fa-chart-pie"></i> Distribución de Votos</h3>
+            <h3><i className="fas fa-chart-pie"></i> Distribucion de Votos</h3>
             <div className="chart-container pie">
               {getPieChartData() && <Pie data={getPieChartData()!} options={chartOptions} />}
             </div>
           </div>
 
           <div className="chart-card">
-            <h3><i className="fas fa-chart-bar"></i> Comparación de Votos</h3>
+            <h3><i className="fas fa-chart-bar"></i> Comparacion de Votos</h3>
             <div className="chart-container bar">
               {getBarChartData() && <Bar data={getBarChartData()!} options={barChartOptions} />}
             </div>
@@ -376,7 +384,7 @@ const CampaignReport: React.FC = () => {
               <i className="fas fa-search"></i>
               <input
                 type="text"
-                placeholder="Buscar por nombre o número de colegiado..."
+                placeholder="Buscar por nombre o numero de colegiado..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -422,13 +430,15 @@ const CampaignReport: React.FC = () => {
           </div>
         </div>
 
-        {/* Información adicional */}
+        {/* Informacion adicional */}
         <div className="additional-info">
           <div className="info-box">
-            <h4><i className="fas fa-info-circle"></i> Información del Reporte</h4>
+            <h4><i className="fas fa-info-circle"></i> Informacion del Reporte</h4>
             <p><strong>Fecha de Generación:</strong> {new Date().toLocaleString('es-GT')}</p>
             <p><strong>Estado de la Campaña:</strong> {report.campaign.estado}</p>
             <p><strong>Total de Votos Emitidos:</strong> {report.campaign.totalVotos}</p>
+            <p><strong>Votantes Registrados:</strong> {totalVoters}</p>
+            <p><strong>Votantes que Participaron:</strong> {new Set(report.votes.map(v => v.numeroColegiado)).size}</p>
           </div>
         </div>
       </div>

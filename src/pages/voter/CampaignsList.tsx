@@ -26,7 +26,6 @@ interface Campaign {
 const CampaignsList: React.FC = () => {
   const navigate = useNavigate();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
-  const [loading, setLoading] = useState(true);
   const [userName, setUserName] = useState('');
   const [filter, setFilter] = useState<'all' | 'habilitada' | 'finalizada'>('all');
 
@@ -36,15 +35,21 @@ const CampaignsList: React.FC = () => {
     setUserName(name);
   }, []);
 
+  // Actualizacion automatica cada 5 segundos
+  useEffect(() => {
+    const interval = setInterval(() => {
+      loadCampaigns();
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, []);
+
   const loadCampaigns = async () => {
     try {
-      setLoading(true);
       const response = await campaignsAPI.getAll();
       setCampaigns(response.campaigns);
     } catch (error) {
       console.error('Error al cargar campañas:', error);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -85,7 +90,7 @@ const CampaignsList: React.FC = () => {
         <div className="navbar-content">
           <div className="navbar-brand">
             <i className="fas fa-vote-yea"></i>
-            <span>Sistema de Votación</span>
+            <span>Sistema de Votacion</span>
           </div>
           <div className="navbar-user">
             <span className="user-name">
@@ -125,94 +130,87 @@ const CampaignsList: React.FC = () => {
           </button>
         </div>
 
-        {loading ? (
-          <div className="loading-container">
-            <div className="spinner"></div>
-            <p>Cargando campañas...</p>
-          </div>
-        ) : (
-          <div className="campaigns-grid">
-            {filteredCampaigns.length === 0 ? (
-              <div className="no-campaigns">
-                <i className="fas fa-inbox"></i>
-                <h3>No hay campañas disponibles</h3>
-                <p>Por el momento no hay campañas {filter === 'all' ? '' : filter === 'habilitada' ? 'activas' : 'finalizadas'}</p>
-              </div>
-            ) : (
-              filteredCampaigns.map((campaign) => (
-                <div
-                  key={campaign._id}
-                  className={`campaign-card ${campaign.estado}`}
-                  onClick={() => navigate(`/voter/campaign/${campaign._id}`)}
-                >
-                  <div className="campaign-status">
-                    <span className={`status-badge ${campaign.estado}`}>
-                      {campaign.estado === 'habilitada' ? (
-                        <>
-                          <i className="fas fa-circle"></i> Activa
-                        </>
-                      ) : campaign.estado === 'finalizada' ? (
-                        <>
-                          <i className="fas fa-flag-checkered"></i> Finalizada
-                        </>
-                      ) : (
-                        <>
-                          <i className="fas fa-pause-circle"></i> Deshabilitada
-                        </>
-                      )}
-                    </span>
-                  </div>
+        <div className="campaigns-grid">
+          {filteredCampaigns.length === 0 ? (
+            <div className="no-campaigns">
+              <i className="fas fa-inbox"></i>
+              <h3>No hay campañas disponibles</h3>
+              <p>Por el momento no hay campañas {filter === 'all' ? '' : filter === 'habilitada' ? 'activas' : 'finalizadas'}</p>
+            </div>
+          ) : (
+            filteredCampaigns.map((campaign) => (
+              <div
+                key={campaign._id}
+                className={`campaign-card ${campaign.estado}`}
+                onClick={() => navigate(`/voter/campaign/${campaign._id}`)}
+              >
+                <div className="campaign-status">
+                  <span className={`status-badge ${campaign.estado}`}>
+                    {campaign.estado === 'habilitada' ? (
+                      <>
+                        <i className="fas fa-circle"></i> Activa
+                      </>
+                    ) : campaign.estado === 'finalizada' ? (
+                      <>
+                        <i className="fas fa-flag-checkered"></i> Finalizada
+                      </>
+                    ) : (
+                      <>
+                        <i className="fas fa-pause-circle"></i> Deshabilitada
+                      </>
+                    )}
+                  </span>
+                </div>
 
-                  <div className="campaign-content">
-                    <h3>{campaign.titulo}</h3>
-                    <p className="campaign-description">{campaign.descripcion}</p>
+                <div className="campaign-content">
+                  <h3>{campaign.titulo}</h3>
+                  <p className="campaign-description">{campaign.descripcion}</p>
 
-                    <div className="campaign-stats">
-                      <div className="stat">
-                        <i className="fas fa-users"></i>
-                        <span>{campaign.candidatos.length} candidatos</span>
-                      </div>
-                      <div className="stat">
-                        <i className="fas fa-vote-yea"></i>
-                        <span>{campaign.totalVotos} votos</span>
-                      </div>
+                  <div className="campaign-stats">
+                    <div className="stat">
+                      <i className="fas fa-users"></i>
+                      <span>{campaign.candidatos.length} candidatos</span>
                     </div>
-
-                    <div className="campaign-dates">
-                      <div className="date-info">
-                        <i className="fas fa-calendar-alt"></i>
-                        <small>
-                          {new Date(campaign.fechaInicio).toLocaleDateString('es-GT')} -{' '}
-                          {new Date(campaign.fechaFin).toLocaleDateString('es-GT')}
-                        </small>
-                      </div>
-                      {campaign.estado === 'habilitada' && (
-                        <div className="time-remaining">
-                          <i className="fas fa-clock"></i>
-                          <small>{getTimeRemaining(campaign.fechaFin)}</small>
-                        </div>
-                      )}
+                    <div className="stat">
+                      <i className="fas fa-vote-yea"></i>
+                      <span>{campaign.totalVotos} votos</span>
                     </div>
                   </div>
 
-                  <div className="campaign-footer">
-                    <button className="btn-view">
-                      {campaign.estado === 'habilitada' ? (
-                        <>
-                          <i className="fas fa-vote-yea"></i> Ver y Votar
-                        </>
-                      ) : (
-                        <>
-                          <i className="fas fa-eye"></i> Ver Resultados
-                        </>
-                      )}
-                    </button>
+                  <div className="campaign-dates">
+                    <div className="date-info">
+                      <i className="fas fa-calendar-alt"></i>
+                      <small>
+                        {new Date(campaign.fechaInicio).toLocaleDateString('es-GT')} -{' '}
+                        {new Date(campaign.fechaFin).toLocaleDateString('es-GT')}
+                      </small>
+                    </div>
+                    {campaign.estado === 'habilitada' && (
+                      <div className="time-remaining">
+                        <i className="fas fa-clock"></i>
+                        <small>{getTimeRemaining(campaign.fechaFin)}</small>
+                      </div>
+                    )}
                   </div>
                 </div>
-              ))
-            )}
-          </div>
-        )}
+
+                <div className="campaign-footer">
+                  <button className="btn-view">
+                    {campaign.estado === 'habilitada' ? (
+                      <>
+                        <i className="fas fa-vote-yea"></i> Ver y Votar
+                      </>
+                    ) : (
+                      <>
+                        <i className="fas fa-eye"></i> Ver Resultados
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
       </div>
     </div>
   );
