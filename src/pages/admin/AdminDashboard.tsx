@@ -86,14 +86,6 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="loading-container">
-        <div className="spinner"></div>
-        <p>Cargando panel de administración...</p>
-      </div>
-    );
-  }
 
   return (
     <div className="admin-dashboard">

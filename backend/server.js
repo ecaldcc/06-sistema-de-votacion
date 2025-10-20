@@ -53,11 +53,11 @@ await connectDB();
 // RUTAS
 // ============================================
 
-// Ruta raíz
+// Ruta raiz
 app.get('/', (req, res) => {
   res.json({ 
     success: true,
-    message: 'API Sistema de Votación - Colegio de Ingenieros',
+    message: 'API Sistema de Votacion - Colegio de Ingenieros',
     version: '1.0.0',
     environment: process.env.NODE_ENV || 'development'
   });
