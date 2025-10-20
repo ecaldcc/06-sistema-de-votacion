@@ -23,7 +23,7 @@ const app = express();
 // CORS - Configuración para producción y desarrollo
 const corsOptions = {
   origin: process.env.NODE_ENV === 'production' 
-    ? process.env.FRONTEND_URL  // URL de tu frontend en producción
+    ? process.env.FRONTEND_URL  // URL de frontend en produccion
     : ['http://localhost:5174', 'http://localhost:5173'], // URLs de desarrollo
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
@@ -43,7 +43,7 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 // ============================================
-// CONEXIÓN A BASE DE DATOS
+// CONEXIoN A BASE DE DATOS
 // ============================================
 
 // Conectar a MongoDB antes de iniciar el servidor
@@ -63,7 +63,7 @@ app.get('/', (req, res) => {
   });
 });
 
-// Health check - útil para Render
+// Health check 
 app.get('/health', (req, res) => {
   res.json({ 
     success: true,
