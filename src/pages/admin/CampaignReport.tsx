@@ -41,6 +41,7 @@ const CampaignReport: React.FC = () => {
   const [report, setReport] = useState<Report | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [totalVoters, setTotalVoters] = useState(0);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   useEffect(() => {
     if (id) {
@@ -54,7 +55,7 @@ const CampaignReport: React.FC = () => {
     if (id && report?.campaign.estado === 'habilitada') {
       const interval = setInterval(() => {
         loadReport();
-      }, 5000); // Actualiza cada 5 segundos
+      }, 5000);
 
       return () => clearInterval(interval);
     }
@@ -64,8 +65,10 @@ const CampaignReport: React.FC = () => {
     try {
       const response = await adminAPI.getCampaignReport(id!);
       setReport(response.report);
+      setIsInitialLoad(false);
     } catch (error) {
       console.error('Error al cargar reporte:', error);
+      setIsInitialLoad(false);
     }
   };
 
@@ -171,7 +174,6 @@ const CampaignReport: React.FC = () => {
   const getParticipationRate = () => {
     if (!report || totalVoters === 0) return 0;
     
-    // Calcular el porcentaje de votantes unicos que participaron
     const uniqueVoters = new Set(report.votes.map(vote => vote.numeroColegiado)).size;
     return ((uniqueVoters / totalVoters) * 100).toFixed(1);
   };
@@ -185,7 +187,8 @@ const CampaignReport: React.FC = () => {
     vote.numeroColegiado.includes(searchTerm)
   ) || [];
 
-  if (!report) {
+  // Solo mostrar error si ya termino la carga inicial y no hay reporte
+  if (!isInitialLoad && !report) {
     return (
       <div className="error-container">
         <i className="fas fa-exclamation-triangle"></i>
@@ -195,6 +198,11 @@ const CampaignReport: React.FC = () => {
         </button>
       </div>
     );
+  }
+
+  // Si esta en carga inicial, no mostrar nada 
+  if (!report) {
+    return null;
   }
 
   const winner = getWinner();
@@ -293,7 +301,7 @@ const CampaignReport: React.FC = () => {
                 {winner.nombre === 'Empate' ? (
                   <>
                     <h3>Empate Tecnico</h3>
-                    <p>Multiples candidatos con {winner.votos} votos</p>
+                    <p>Dos o mas candidatos con {winner.votos} votos</p>
                   </>
                 ) : (
                   <>
@@ -307,17 +315,17 @@ const CampaignReport: React.FC = () => {
           </div>
         )}
 
-        {/* Gráficos */}
+        {/* Graficos */}
         <div className="charts-section">
           <div className="chart-card">
-            <h3><i className="fas fa-chart-pie"></i> Distribucion de Votos</h3>
+            <h3><i className="fas fa-chart-pie"></i> Distribución de Votos</h3>
             <div className="chart-container pie">
               {getPieChartData() && <Pie data={getPieChartData()!} options={chartOptions} />}
             </div>
           </div>
 
           <div className="chart-card">
-            <h3><i className="fas fa-chart-bar"></i> Comparacion de Votos</h3>
+            <h3><i className="fas fa-chart-bar"></i> Comparación de Votos</h3>
             <div className="chart-container bar">
               {getBarChartData() && <Bar data={getBarChartData()!} options={barChartOptions} />}
             </div>
@@ -384,7 +392,7 @@ const CampaignReport: React.FC = () => {
               <i className="fas fa-search"></i>
               <input
                 type="text"
-                placeholder="Buscar por nombre o numero de colegiado..."
+                placeholder="Buscar por nombre o número de colegiado..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -430,11 +438,11 @@ const CampaignReport: React.FC = () => {
           </div>
         </div>
 
-        {/* Informacion adicional */}
+        {/* Información adicional */}
         <div className="additional-info">
           <div className="info-box">
-            <h4><i className="fas fa-info-circle"></i> Informacion del Reporte</h4>
-            <p><strong>Fecha de Generación:</strong> {new Date().toLocaleString('es-GT')}</p>
+            <h4><i className="fas fa-info-circle"></i> Información del Reporte</h4>
+            <p><strong>Fecha de Generacion:</strong> {new Date().toLocaleString('es-GT')}</p>
             <p><strong>Estado de la Campaña:</strong> {report.campaign.estado}</p>
             <p><strong>Total de Votos Emitidos:</strong> {report.campaign.totalVotos}</p>
             <p><strong>Votantes Registrados:</strong> {totalVoters}</p>
