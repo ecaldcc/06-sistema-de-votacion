@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 
-// Importar configuración de base de datos
+// Importar config de base de datos
 import connectDB from './config/conexion.js';
 
 // Importar rutas
@@ -20,7 +20,7 @@ const app = express();
 // MIDDLEWARE
 // ============================================
 
-// CORS - Configuración para producción y desarrollo
+// CORS - Configuracion para produccion y desarrollo
 const corsOptions = {
   origin: process.env.NODE_ENV === 'production' 
     ? process.env.FRONTEND_URL  // URL de frontend en produccion

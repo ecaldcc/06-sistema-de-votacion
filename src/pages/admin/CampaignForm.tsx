@@ -34,7 +34,6 @@ const CampaignForm: React.FC = () => {
   const [editingCandidateIndex, setEditingCandidateIndex] = useState<number | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
-  const [, setLoadingData] = useState(isEditing);
 
   useEffect(() => {
     if (isEditing) {
@@ -44,16 +43,19 @@ const CampaignForm: React.FC = () => {
 
   const loadCampaignData = async () => {
     try {
-      setLoadingData(true);
       const response = await campaignsAPI.getById(id!);
       const campaign = response.campaign;
+
+      // Convertir las fechas UTC a formato local para el input date
+      const startDate = new Date(campaign.fechaInicio);
+      const endDate = new Date(campaign.fechaFin);
 
       setFormData({
         titulo: campaign.titulo,
         descripcion: campaign.descripcion,
         votosDisponibles: campaign.votosDisponibles,
-        fechaInicio: campaign.fechaInicio.split('T')[0],
-        fechaFin: campaign.fechaFin.split('T')[0]
+        fechaInicio: formatDateForInput(startDate),
+        fechaFin: formatDateForInput(endDate)
       });
 
       setCandidatos(campaign.candidatos);
@@ -61,9 +63,23 @@ const CampaignForm: React.FC = () => {
       console.error('Error al cargar campaña:', error);
       alert('Error al cargar la campaña');
       navigate('/admin/dashboard');
-    } finally {
-      setLoadingData(false);
     }
+  };
+
+  // Convertir fecha a formato YYYY-MM-DD para el input
+  const formatDateForInput = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  // Convertir fecha local a ISO string con hora al mediodía para evitar problemas de zona horaria
+  const convertToISOString = (dateString: string): string => {
+    // Crear fecha con hora al mediodía (12:00) para evitar cambios de día por zona horaria
+    const [year, month, day] = dateString.split('-');
+    const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), 12, 0, 0);
+    return date.toISOString();
   };
 
   const validateForm = () => {
@@ -115,6 +131,8 @@ const CampaignForm: React.FC = () => {
 
       const campaignData = {
         ...formData,
+        fechaInicio: convertToISOString(formData.fechaInicio),
+        fechaFin: convertToISOString(formData.fechaFin),
         candidatos: candidatos.map(({ _id, ...rest }) => rest)
       };
 
@@ -165,8 +183,6 @@ const CampaignForm: React.FC = () => {
       setCandidatos(candidatos.filter((_, i) => i !== index));
     }
   };
-
-  
 
   return (
     <div className="campaign-form-page">
