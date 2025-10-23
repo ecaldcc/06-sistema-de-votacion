@@ -34,7 +34,7 @@ const seedDatabase = async () => {
     // ========================================
     // CREAR USUARIO ADMINISTRADOR
     // ========================================
-    console.log('👤 Creando usuario administrador...');
+    console.log(' Creando usuario administrador...');
     const admin = await User.create({
       numeroColegiado: 'ADMIN001',
       nombreCompleto: 'Administrador Sistema',
