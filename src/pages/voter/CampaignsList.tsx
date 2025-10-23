@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { campaignsAPI, authAPI } from '../../services/api';
+import { wsService, WSEventType } from '../../services/websocketService';
 import '../../styles/CampaignList.scss';
 
 interface Candidate {
@@ -33,15 +34,58 @@ const CampaignsList: React.FC = () => {
     loadCampaigns();
     const name = localStorage.getItem('userName') || 'Usuario';
     setUserName(name);
-  }, []);
 
-  // Actualizacion automatica cada 5 segundos
-  useEffect(() => {
-    const interval = setInterval(() => {
-      loadCampaigns();
-    }, 5000);
+    // Intentar conectar WebSocket
+    const WS_URL = import.meta.env.VITE_WS_URL;
+    if (WS_URL) {
+      try {
+        if (!wsService.isConnected()) {
+          wsService.connect(WS_URL);
+        }
 
-    return () => clearInterval(interval);
+        // Escuchar eventos globales
+        const handleNewCampaign = () => {
+          console.log('Nueva campaña creada');
+          loadCampaigns();
+        };
+
+        const handleCampaignDeleted = () => {
+          console.log('Campaña eliminada');
+          loadCampaigns();
+        };
+
+        const handleCampaignToggled = () => {
+          console.log(' Estado de campaña cambió');
+          loadCampaigns();
+        };
+
+        const handleVoteCast = () => {
+          console.log('Nuevo voto registrado');
+          loadCampaigns();
+        };
+
+        wsService.on(WSEventType.NEW_CAMPAIGN, handleNewCampaign);
+        wsService.on(WSEventType.CAMPAIGN_DELETED, handleCampaignDeleted);
+        wsService.on(WSEventType.CAMPAIGN_TOGGLED, handleCampaignToggled);
+        wsService.on(WSEventType.VOTE_CAST, handleVoteCast);
+
+        return () => {
+          wsService.off(WSEventType.NEW_CAMPAIGN, handleNewCampaign);
+          wsService.off(WSEventType.CAMPAIGN_DELETED, handleCampaignDeleted);
+          wsService.off(WSEventType.CAMPAIGN_TOGGLED, handleCampaignToggled);
+          wsService.off(WSEventType.VOTE_CAST, handleVoteCast);
+        };
+      } catch (error) {
+        console.log('WebSocket no disponible, usando actualizaciones periodicas');
+      }
+    } else {
+      // Fallback: Actualizacion periodica
+      const interval = setInterval(() => {
+        loadCampaigns();
+      }, 5000);
+
+      return () => clearInterval(interval);
+    }
   }, []);
 
   const loadCampaigns = async () => {
@@ -56,6 +100,7 @@ const CampaignsList: React.FC = () => {
   const handleLogout = async () => {
     try {
       await authAPI.logout();
+      wsService.disconnect(); // Desconectar WebSocket al salir
       navigate('/login');
     } catch (error) {
       console.error('Error al cerrar sesión:', error);
@@ -90,7 +135,7 @@ const CampaignsList: React.FC = () => {
         <div className="navbar-content">
           <div className="navbar-brand">
             <i className="fas fa-vote-yea"></i>
-            <span>Sistema de Votacion</span>
+            <span>Sistema de Votación</span>
           </div>
           <div className="navbar-user">
             <span className="user-name">

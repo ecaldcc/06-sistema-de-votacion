@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { adminAPI } from '../../services/api';
+import { wsService, WSEventType } from '../../services/websocketService';
 import { Pie, Bar } from 'react-chartjs-2';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
 import '../../styles/CampaignReport.scss';
@@ -47,17 +48,52 @@ const CampaignReport: React.FC = () => {
     if (id) {
       loadReport();
       loadTotalVoters();
-    }
-  }, [id]);
 
-  // Actualizacion automatica cada 5 segundos
-  useEffect(() => {
-    if (id && report?.campaign.estado === 'habilitada') {
-      const interval = setInterval(() => {
-        loadReport();
-      }, 5000);
+      // Intentar conectar WebSocket
+      const WS_URL = import.meta.env.VITE_WS_URL;
+      if (WS_URL) {
+        try {
+          if (!wsService.isConnected()) {
+            wsService.connect(WS_URL);
+          }
 
-      return () => clearInterval(interval);
+          wsService.subscribeToCampaign(id);
+
+          const handleVoteCast = (data: any) => {
+            if (data.campaignId === id) {
+              console.log('Nuevo voto en reporte');
+              loadReport();
+            }
+          };
+
+          const handleCampaignUpdated = (data: any) => {
+            if (data.campaignId === id) {
+              console.log('Campaña actualizada en reporte');
+              loadReport();
+            }
+          };
+
+          wsService.on(WSEventType.VOTE_CAST, handleVoteCast);
+          wsService.on(WSEventType.CAMPAIGN_UPDATED, handleCampaignUpdated);
+
+          return () => {
+            wsService.off(WSEventType.VOTE_CAST, handleVoteCast);
+            wsService.off(WSEventType.CAMPAIGN_UPDATED, handleCampaignUpdated);
+            wsService.unsubscribeFromCampaign(id);
+          };
+        } catch (error) {
+          console.log('WebSocket no disponible, usando actualizaciones periódicas');
+        }
+      } else {
+        // Fallback: Actualizacion periodica solo si la campaña está habilitada
+        const interval = setInterval(() => {
+          if (report?.campaign.estado === 'habilitada') {
+            loadReport();
+          }
+        }, 5000);
+
+        return () => clearInterval(interval);
+      }
     }
   }, [id, report?.campaign.estado]);
 
@@ -187,7 +223,6 @@ const CampaignReport: React.FC = () => {
     vote.numeroColegiado.includes(searchTerm)
   ) || [];
 
-  // Solo mostrar error si ya termino la carga inicial y no hay reporte
   if (!isInitialLoad && !report) {
     return (
       <div className="error-container">
@@ -200,7 +235,6 @@ const CampaignReport: React.FC = () => {
     );
   }
 
-  // Si esta en carga inicial, no mostrar nada 
   if (!report) {
     return null;
   }
@@ -226,7 +260,7 @@ const CampaignReport: React.FC = () => {
       </div>
 
       <div className="report-container">
-        {/* Informacion de la campaña */}
+        {/* Información de la campaña */}
         <div className="campaign-info-card">
           <div className="info-header">
             <h2>{report.campaign.titulo}</h2>
@@ -247,7 +281,7 @@ const CampaignReport: React.FC = () => {
           </div>
         </div>
 
-        {/* Estadisticas principales */}
+        {/* Estadísticas principales */}
         <div className="stats-section">
           <div className="stat-box blue">
             <div className="stat-icon">
@@ -300,8 +334,8 @@ const CampaignReport: React.FC = () => {
               <div className="winner-info">
                 {winner.nombre === 'Empate' ? (
                   <>
-                    <h3>Empate Tecnico</h3>
-                    <p>Dos o mas candidatos con {winner.votos} votos</p>
+                    <h3>Empate Técnico</h3>
+                    <p>Multiples candidatos con {winner.votos} votos</p>
                   </>
                 ) : (
                   <>
@@ -315,7 +349,7 @@ const CampaignReport: React.FC = () => {
           </div>
         )}
 
-        {/* Graficos */}
+        {/* Gráficos */}
         <div className="charts-section">
           <div className="chart-card">
             <h3><i className="fas fa-chart-pie"></i> Distribución de Votos</h3>
@@ -442,7 +476,7 @@ const CampaignReport: React.FC = () => {
         <div className="additional-info">
           <div className="info-box">
             <h4><i className="fas fa-info-circle"></i> Información del Reporte</h4>
-            <p><strong>Fecha de Generacion:</strong> {new Date().toLocaleString('es-GT')}</p>
+            <p><strong>Fecha de Generación:</strong> {new Date().toLocaleString('es-GT')}</p>
             <p><strong>Estado de la Campaña:</strong> {report.campaign.estado}</p>
             <p><strong>Total de Votos Emitidos:</strong> {report.campaign.totalVotos}</p>
             <p><strong>Votantes Registrados:</strong> {totalVoters}</p>

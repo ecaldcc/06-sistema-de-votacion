@@ -217,7 +217,7 @@ router.get('/verify', authMiddleware, async (req, res) => {
 router.post('/logout', authMiddleware, async (req, res) => {
   res.json({
     success: true,
-    message: 'Sesión cerrada exitosamente.'
+    message: 'Sesion cerrada exitosamente.'
   });
 });
 

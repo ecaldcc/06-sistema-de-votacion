@@ -6,6 +6,14 @@ import { authMiddleware, voterMiddleware } from '../middleware/auth-jwt.js';
 
 const router = express.Router();
 
+// Variable para almacenar la funcion de broadcast (se inyectara desde server.js)
+let broadcastToCampaign = null;
+
+// Función para inyectar el broadcast desde el servidor principal
+export const setBroadcastFunction = (broadcastFn) => {
+  broadcastToCampaign = broadcastFn;
+};
+
 // Emitir voto
 router.post('/', authMiddleware, voterMiddleware, async (req, res) => {
   try {
@@ -18,7 +26,7 @@ router.post('/', authMiddleware, voterMiddleware, async (req, res) => {
       });
     }
 
-    // Verificar que la campa;a existe
+    // Verificar que la campaña existe
     const campaign = await Campaign.findById(campaignId);
     if (!campaign) {
       return res.status(404).json({
@@ -27,7 +35,7 @@ router.post('/', authMiddleware, voterMiddleware, async (req, res) => {
       });
     }
 
-    // verificar que la campa;ana este habilitada
+    // verificar que la campaña este habilitada
     if (campaign.estado !== 'habilitada') {
       return res.status(400).json({
         success: false,
@@ -53,12 +61,12 @@ router.post('/', authMiddleware, voterMiddleware, async (req, res) => {
       });
     }
 
-    // Verificar que el candidato existe en la campana
+    // Verificar que el candidato existe en la campaña
     const candidate = campaign.candidatos.id(candidateId);
     if (!candidate) {
       return res.status(404).json({
         success: false,
-        message: 'Candidato no encontrado en esta campa;a.'
+        message: 'Candidato no encontrado en esta campaña.'
       });
     }
 
@@ -74,6 +82,9 @@ router.post('/', authMiddleware, voterMiddleware, async (req, res) => {
         message: 'Ya has votado en esta campaña.'
       });
     }
+
+    // Obtener información del usuario
+    const user = await User.findById(req.userId).select('nombreCompleto numeroColegiado');
 
     // Crear el voto
     const vote = new Vote({
@@ -100,6 +111,21 @@ router.post('/', authMiddleware, voterMiddleware, async (req, res) => {
         }
       }
     });
+
+    // WEBSOCKET: Broadcast del nuevo voto a todos los suscritos a esta campaña
+    if (broadcastToCampaign) {
+      broadcastToCampaign(campaignId.toString(), 'vote_cast', {
+        campaignId: campaignId.toString(),
+        candidateId: candidateId.toString(),
+        voterName: user.nombreCompleto,
+        numeroColegiado: user.numeroColegiado,
+        candidateName: candidate.nombre,
+        newVoteCount: candidate.votos,
+        totalVotes: campaign.totalVotos,
+        timestamp: new Date()
+      });
+      console.log(`Broadcast: Voto emitido en campaña ${campaignId}`);
+    }
 
     res.json({
       success: true,

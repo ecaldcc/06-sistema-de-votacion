@@ -6,7 +6,17 @@ const router = express.Router();
 
 import { authMiddleware, adminMiddleware } from '../middleware/auth-jwt.js';
 
-// Todas las rutas requieren autenticación y permisos de admin
+// Variables para almacenar las funciones de broadcast
+let broadcastToCampaign = null;
+let broadcastToAll = null;
+
+// Funcion para inyectar los broadcasts desde el servidor principal
+export const setBroadcastFunctions = (broadcastCampaignFn, broadcastAllFn) => {
+  broadcastToCampaign = broadcastCampaignFn;
+  broadcastToAll = broadcastAllFn;
+};
+
+// Todas las rutas requieren autenticacion y permisos de admin
 router.use(authMiddleware, adminMiddleware);
 
 // ========== GESTION DE CAMPAÑAS ==========
@@ -49,6 +59,19 @@ router.post('/campaigns', async (req, res) => {
     });
 
     await campaign.save();
+
+    // WEBSOCKET: Notificar a todos sobre nueva campaña
+    if (broadcastToAll) {
+      broadcastToAll('new_campaign', {
+        campaign: {
+          _id: campaign._id.toString(),
+          titulo: campaign.titulo,
+          descripcion: campaign.descripcion,
+          estado: campaign.estado
+        }
+      });
+      console.log('Broadcast: Nueva campaña creada');
+    }
 
     res.status(201).json({
       success: true,
@@ -125,6 +148,15 @@ router.put('/campaigns/:id', async (req, res) => {
       { new: true, runValidators: true }
     );
 
+    // WEBSOCKET: Notificar actualizacion de campaña
+    if (broadcastToCampaign) {
+      broadcastToCampaign(id, 'campaign_updated', {
+        campaignId: id,
+        updates: updates
+      });
+      console.log(` Broadcast: Campaña ${id} actualizada`);
+    }
+
     res.json({
       success: true,
       message: 'Campaña actualizada exitosamente.',
@@ -164,6 +196,14 @@ router.delete('/campaigns/:id', async (req, res) => {
 
     await Campaign.findByIdAndDelete(id);
     await Vote.deleteMany({ campaignId: id });
+
+    // WEBSOCKET: Notificar eliminación de campaña
+    if (broadcastToAll) {
+      broadcastToAll('campaign_deleted', {
+        campaignId: id
+      });
+      console.log(`Broadcast: Campaña ${id} eliminada`);
+    }
 
     res.json({
       success: true,
@@ -206,6 +246,23 @@ router.patch('/campaigns/:id/toggle', async (req, res) => {
       });
     }
 
+    // WEBSOCKET: Notificar cambio de estado
+    if (broadcastToCampaign && broadcastToAll) {
+      // Notificar a los suscritos a la campaña específica
+      broadcastToCampaign(id, 'campaign_toggled', {
+        campaignId: id,
+        newState: estado
+      });
+      
+      // También notificar globalmente para actualizar listas
+      broadcastToAll('campaign_toggled', {
+        campaignId: id,
+        newState: estado
+      });
+      
+      console.log(`Broadcast: Campaña ${id} cambió a estado ${estado}`);
+    }
+
     res.json({
       success: true,
       message: `Campaña ${estado} exitosamente.`,
@@ -222,7 +279,7 @@ router.patch('/campaigns/:id/toggle', async (req, res) => {
   }
 });
 
-// ========== GESTIÓN DE CANDIDATOS ==========
+// ========== GESTIoN DE CANDIDATOS ==========
 
 // Agregar candidato a campaña
 router.post('/campaigns/:id/candidates', async (req, res) => {
@@ -253,6 +310,14 @@ router.post('/campaigns/:id/candidates', async (req, res) => {
     });
 
     await campaign.save();
+
+    // WEBSOCKET: Notificar cambio en candidatos
+    if (broadcastToCampaign) {
+      broadcastToCampaign(id, 'campaign_updated', {
+        campaignId: id,
+        type: 'candidate_added'
+      });
+    }
 
     res.json({
       success: true,
@@ -297,6 +362,15 @@ router.put('/campaigns/:campaignId/candidates/:candidateId', async (req, res) =>
     if (propuestas !== undefined) candidate.propuestas = propuestas;
 
     await campaign.save();
+
+    // WEBSOCKET: Notificar actualización de candidato
+    if (broadcastToCampaign) {
+      broadcastToCampaign(campaignId, 'campaign_updated', {
+        campaignId,
+        type: 'candidate_updated',
+        candidateId
+      });
+    }
 
     res.json({
       success: true,
@@ -346,6 +420,15 @@ router.delete('/campaigns/:campaignId/candidates/:candidateId', async (req, res)
     candidate.remove();
     await campaign.save();
 
+    // WEBSOCKET: Notificar eliminación de candidato
+    if (broadcastToCampaign) {
+      broadcastToCampaign(campaignId, 'campaign_updated', {
+        campaignId,
+        type: 'candidate_deleted',
+        candidateId
+      });
+    }
+
     res.json({
       success: true,
       message: 'Candidato eliminado exitosamente.',
@@ -371,7 +454,6 @@ router.get('/reports/general', async (req, res) => {
     const activeCampaigns = await Campaign.countDocuments({ estado: 'habilitada' });
     const finishedCampaigns = await Campaign.countDocuments({ estado: 'finalizada' });
     
-    // CORRECCIÓN: Sumar el totalVotos de todas las campañas en lugar de contar documentos Vote
     const campaigns = await Campaign.find().select('titulo descripcion totalVotos estado fechaInicio fechaFin candidatos');
     const totalVotes = campaigns.reduce((sum, campaign) => sum + campaign.totalVotos, 0);
     
@@ -447,7 +529,7 @@ router.get('/reports/campaign/:id', async (req, res) => {
   }
 });
 
-// ========== GESTIÓN DE USUARIOS ==========
+// ========== GESTIoN DE USUARIOS ==========
 
 // Obtener todos los votantes
 router.get('/users/voters', async (req, res) => {
@@ -487,6 +569,14 @@ router.patch('/users/:id/toggle', async (req, res) => {
       return res.status(404).json({
         success: false,
         message: 'Usuario no encontrado.'
+      });
+    }
+
+    //  WEBSOCKET: Notificar cambio de estado de usuario (opcional)
+    if (broadcastToAll) {
+      broadcastToAll('user_toggled', {
+        userId: id,
+        isActive
       });
     }
 
