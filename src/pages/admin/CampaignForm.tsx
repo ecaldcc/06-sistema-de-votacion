@@ -19,8 +19,8 @@ const CampaignForm: React.FC = () => {
     titulo: '',
     descripcion: '',
     votosDisponibles: 1,
-    fechaInicio: '',
-    fechaFin: ''
+    fechaFin: '',
+    horaFin: '23:59' // Hora por defecto: fin del dia
   });
 
   const [candidatos, setCandidatos] = useState<Candidate[]>([]);
@@ -46,16 +46,17 @@ const CampaignForm: React.FC = () => {
       const response = await campaignsAPI.getById(id!);
       const campaign = response.campaign;
 
-      // Convertir las fechas UTC a formato local para el input date
-      const startDate = new Date(campaign.fechaInicio);
+      // Extraer fecha y hora de fin
       const endDate = new Date(campaign.fechaFin);
+      const fechaFin = endDate.toISOString().split('T')[0]; // YYYY-MM-DD
+      const horaFin = `${String(endDate.getHours()).padStart(2, '0')}:${String(endDate.getMinutes()).padStart(2, '0')}`; // HH:mm
 
       setFormData({
         titulo: campaign.titulo,
         descripcion: campaign.descripcion,
         votosDisponibles: campaign.votosDisponibles,
-        fechaInicio: formatDateForInput(startDate),
-        fechaFin: formatDateForInput(endDate)
+        fechaFin,
+        horaFin
       });
 
       setCandidatos(campaign.candidatos);
@@ -64,22 +65,6 @@ const CampaignForm: React.FC = () => {
       alert('Error al cargar la campaña');
       navigate('/admin/dashboard');
     }
-  };
-
-  // Convertir fecha a formato YYYY-MM-DD para el input
-  const formatDateForInput = (date: Date): string => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
-
-  // Convertir fecha local a ISO string con hora al mediodía para evitar problemas de zona horaria
-  const convertToISOString = (dateString: string): string => {
-    // Crear fecha con hora al mediodía (12:00) para evitar cambios de día por zona horaria
-    const [year, month, day] = dateString.split('-');
-    const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), 12, 0, 0);
-    return date.toISOString();
   };
 
   const validateForm = () => {
@@ -97,17 +82,23 @@ const CampaignForm: React.FC = () => {
       newErrors.votosDisponibles = 'Debe haber al menos 1 voto disponible';
     }
 
-    if (!formData.fechaInicio) {
-      newErrors.fechaInicio = 'La fecha de inicio es requerida';
-    }
-
     if (!formData.fechaFin) {
       newErrors.fechaFin = 'La fecha de fin es requerida';
     }
 
-    if (formData.fechaInicio && formData.fechaFin) {
-      if (new Date(formData.fechaFin) <= new Date(formData.fechaInicio)) {
-        newErrors.fechaFin = 'La fecha de fin debe ser posterior a la fecha de inicio';
+    if (!formData.horaFin) {
+      newErrors.horaFin = 'La hora de fin es requerida';
+    }
+
+    // Validar que la fecha de fin sea futura
+    if (formData.fechaFin && formData.horaFin) {
+      const [year, month, day] = formData.fechaFin.split('-').map(Number);
+      const [hours, minutes] = formData.horaFin.split(':').map(Number);
+      const fechaFinCompleta = new Date(year, month - 1, day, hours, minutes);
+      const ahora = new Date();
+
+      if (fechaFinCompleta <= ahora) {
+        newErrors.fechaFin = 'La fecha y hora de fin debe ser futura';
       }
     }
 
@@ -129,10 +120,17 @@ const CampaignForm: React.FC = () => {
     try {
       setLoading(true);
 
+      // Construir fecha de fin con hora
+      const [year, month, day] = formData.fechaFin.split('-').map(Number);
+      const [hours, minutes] = formData.horaFin.split(':').map(Number);
+      const fechaFinCompleta = new Date(year, month - 1, day, hours, minutes);
+
       const campaignData = {
-        ...formData,
-        fechaInicio: convertToISOString(formData.fechaInicio),
-        fechaFin: convertToISOString(formData.fechaFin),
+        titulo: formData.titulo,
+        descripcion: formData.descripcion,
+        votosDisponibles: formData.votosDisponibles,
+        // fechaInicio se establece automáticamente cuando se habilita la campaña
+        fechaFin: fechaFinCompleta.toISOString(),
         candidatos: candidatos.map(({ _id, ...rest }) => rest)
       };
 
@@ -141,7 +139,7 @@ const CampaignForm: React.FC = () => {
         alert('Campaña actualizada exitosamente');
       } else {
         await adminAPI.createCampaign(campaignData);
-        alert('Campaña creada exitosamente');
+        alert('Campaña creada exitosamente. Recuerda habilitarla para que inicie.');
       }
 
       navigate('/admin/dashboard');
@@ -237,16 +235,25 @@ const CampaignForm: React.FC = () => {
               </div>
 
               <div className="form-group">
-                <label>Fecha de Inicio *</label>
-                <input
-                  type="date"
-                  className={errors.fechaInicio ? 'error' : ''}
-                  value={formData.fechaInicio}
-                  onChange={(e) => setFormData({ ...formData, fechaInicio: e.target.value })}
-                />
-                {errors.fechaInicio && <span className="error-message">{errors.fechaInicio}</span>}
+                <label>
+                  <i className="fas fa-info-circle"></i> Fecha de Inicio
+                </label>
+                <div style={{
+                  padding: '12px',
+                  backgroundColor: '#f0f4ff',
+                  borderRadius: '6px',
+                  border: '1px solid #d0d9ff',
+                  color: '#4a5568'
+                }}>
+                  <i className="fas fa-clock"></i> Se establece al habilitar la campaña
+                </div>
+                <small style={{ color: '#718096', fontSize: '13px' }}>
+                  La votación iniciará cuando cambies el estado a "habilitada"
+                </small>
               </div>
+            </div>
 
+            <div className="form-row">
               <div className="form-group">
                 <label>Fecha de Fin *</label>
                 <input
@@ -254,8 +261,23 @@ const CampaignForm: React.FC = () => {
                   className={errors.fechaFin ? 'error' : ''}
                   value={formData.fechaFin}
                   onChange={(e) => setFormData({ ...formData, fechaFin: e.target.value })}
+                  min={new Date().toISOString().split('T')[0]}
                 />
                 {errors.fechaFin && <span className="error-message">{errors.fechaFin}</span>}
+              </div>
+
+              <div className="form-group">
+                <label>Hora de Fin *</label>
+                <input
+                  type="time"
+                  className={errors.horaFin ? 'error' : ''}
+                  value={formData.horaFin}
+                  onChange={(e) => setFormData({ ...formData, horaFin: e.target.value })}
+                />
+                {errors.horaFin && <span className="error-message">{errors.horaFin}</span>}
+                <small style={{ color: '#718096', fontSize: '13px' }}>
+                  La votación cerrará automáticamente a esta hora
+                </small>
               </div>
             </div>
           </div>
@@ -293,7 +315,7 @@ const CampaignForm: React.FC = () => {
                     type="text"
                     value={newCandidate.nombre}
                     onChange={(e) => setNewCandidate({ ...newCandidate, nombre: e.target.value })}
-                    placeholder="Ing. Juan Pérez"
+                    placeholder="Ing. Juan"
                   />
                 </div>
 

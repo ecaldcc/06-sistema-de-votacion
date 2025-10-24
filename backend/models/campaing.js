@@ -37,7 +37,8 @@ const campaignSchema = new mongoose.Schema({
   },
   fechaInicio: {
     type: Date,
-    required: true
+    required: false,
+    default: null,
   },
   fechaFin: {
     type: Date,

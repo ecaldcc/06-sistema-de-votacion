@@ -1,7 +1,5 @@
 import axios, { AxiosError, type AxiosInstance } from 'axios';
 
-
-// 
 const API_URL = import.meta.env.VITE_API_URL || 'https://votacion-backend-w7t6.onrender.com/api';
 
 const api: AxiosInstance = axios.create({
@@ -10,6 +8,9 @@ const api: AxiosInstance = axios.create({
     'Content-Type': 'application/json',
   },
 });
+
+// Variable para evitar multiples alertas
+let sessionExpiredAlertShown = false;
 
 // Interceptor para agregar token JWT a las peticiones
 api.interceptors.request.use(
@@ -25,19 +26,39 @@ api.interceptors.request.use(
   }
 );
 
-// Interceptor para manejar errores de autenticación
+// Interceptor para manejar errores de autenticacion
 api.interceptors.response.use(
   (response) => response,
   (error: AxiosError<any>) => {
+    // Error 401: No autorizado o token expirado
     if (error.response?.status === 401) {
-      // Token expirado o inválido
-      if (error.response?.data?.expired) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('userRole');
-        localStorage.removeItem('userName');
-        window.location.href = '/login';
+      const isExpired = error.response?.data?.expired || 
+                       error.response?.data?.message?.includes('expirado') ||
+                       error.response?.data?.message?.includes('expired');
+      
+      // Limpiar datos de sesión
+      localStorage.removeItem('token');
+      localStorage.removeItem('userRole');
+      localStorage.removeItem('userName');
+      
+      // Mostrar alerta solo una vez
+      if (!sessionExpiredAlertShown) {
+        sessionExpiredAlertShown = true;
+        
+        if (isExpired) {
+          alert('Tu sesión ha expirado. Por favor, inicia sesión nuevamente.');
+        } else {
+          alert('Tu sesión no es válida. Por favor, inicia sesión nuevamente.');
+        }
+        
+        // Redirigir al login despues de un pequeño delay
+        setTimeout(() => {
+          sessionExpiredAlertShown = false; // Reset para futuras sesiones
+          window.location.href = '/login';
+        }, 500);
       }
     }
+    
     return Promise.reject(error);
   }
 );
@@ -73,11 +94,18 @@ export const authAPI = {
   },
 
   logout: async () => {
-    const response = await api.post('/auth/logout');
-    localStorage.removeItem('token');
-    localStorage.removeItem('userRole');
-    localStorage.removeItem('userName');
-    return response.data;
+    try {
+      const response = await api.post('/auth/logout');
+      return response.data;
+    } catch (error) {
+      // Ignorar errores en logout (por si el token ya expiró)
+      console.log('Error en logout (ignorado):', error);
+    } finally {
+      // Siempre limpiar el localStorage
+      localStorage.removeItem('token');
+      localStorage.removeItem('userRole');
+      localStorage.removeItem('userName');
+    }
   },
 };
 

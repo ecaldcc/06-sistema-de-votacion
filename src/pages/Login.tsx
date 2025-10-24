@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import '../styles/Login.scss';
 
 interface LoginFormData {
@@ -19,12 +19,12 @@ interface RegisterFormData {
   confirmPassword: string;
 }
 
-console.log('VITE_API_URL =', import.meta.env.VITE_API_URL);
-
 const Login: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [userType, setUserType] = useState<'voter' | 'admin' | null>(null);
+  const [showSessionExpiredMessage, setShowSessionExpiredMessage] = useState(false);
   
   const [loginData, setLoginData] = useState<LoginFormData>({
     numeroColegiado: '',
@@ -46,6 +46,17 @@ const Login: React.FC = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
 
+  // Mostrar mensaje de sesion expirada si viene del estado
+  useEffect(() => {
+    if (location.state?.sessionExpired) {
+      setShowSessionExpiredMessage(true);
+      // Ocultar el mensaje despues de 5 segundos
+      setTimeout(() => {
+        setShowSessionExpiredMessage(false);
+      }, 5000);
+    }
+  }, [location]);
+
   // Validaciones
   const validateDPI = (dpi: string): boolean => {
     return /^\d{13}$/.test(dpi);
@@ -56,13 +67,13 @@ const Login: React.FC = () => {
   };
 
   const validatePassword = (password: string): boolean => {
-    // Al menos 8 caracteres, una mayúscula, una minúscula y un número
     return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/.test(password);
   };
 
   const handleQuickAccess = (type: 'voter' | 'admin') => {
     setUserType(type);
     setMode('login');
+    setShowSessionExpiredMessage(false); // Ocultar mensaje al seleccionar tipo
   };
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
@@ -77,7 +88,7 @@ const Login: React.FC = () => {
     }
 
     if (!loginData.dpi || !validateDPI(loginData.dpi)) {
-      newErrors.dpi = 'El DPI debe tener 13 dígitos';
+      newErrors.dpi = 'El DPI debe tener 13 digitos';
     }
 
     if (!loginData.fechaNacimiento) {
@@ -95,7 +106,6 @@ const Login: React.FC = () => {
     }
 
     try {
-      // Aquí iría la llamada al backend
       const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/login`, {
         method: 'POST',
         headers: {
@@ -115,17 +125,17 @@ const Login: React.FC = () => {
         localStorage.setItem('userRole', data.role);
         localStorage.setItem('userName', data.name);
 
-        // Redirigir según el rol
+        // Redirigir segun el rol
         if (data.role === 'admin') {
           navigate('/admin/dashboard');
         } else {
           navigate('/voter/campaigns');
         }
       } else {
-        setErrors({ general: data.message || 'Error al iniciar sesión' });
+        setErrors({ general: data.message || 'Error al iniciar sesion' });
       }
     } catch (error) {
-      setErrors({ general: 'Error de conexión. Intente nuevamente.' });
+      setErrors({ general: 'Error de conexion. Intente nuevamente.' });
     } finally {
       setLoading(false);
     }
@@ -139,7 +149,7 @@ const Login: React.FC = () => {
     const newErrors: Record<string, string> = {};
 
     if (!registerData.numeroColegiado) {
-      newErrors.numeroColegiado = 'El número de colegiado es requerido';
+      newErrors.numeroColegiado = 'El numero de colegiado es requerido';
     }
 
     if (!registerData.nombreCompleto) {
@@ -151,7 +161,7 @@ const Login: React.FC = () => {
     }
 
     if (!registerData.dpi || !validateDPI(registerData.dpi)) {
-      newErrors.dpi = 'El DPI debe tener 13 dígitos';
+      newErrors.dpi = 'El DPI debe tener 13 digitos';
     }
 
     if (!registerData.fechaNacimiento) {
@@ -159,7 +169,7 @@ const Login: React.FC = () => {
     }
 
     if (!registerData.password || !validatePassword(registerData.password)) {
-      newErrors.password = 'La contraseña debe tener al menos 8 caracteres, una mayúscula, una minúscula y un número';
+      newErrors.password = 'La contraseña debe tener al menos 8 caracteres, una mayuscula, una minuscula y un numero';
     }
 
     if (registerData.password !== registerData.confirmPassword) {
@@ -184,7 +194,7 @@ const Login: React.FC = () => {
       const data = await response.json();
 
       if (response.ok) {
-        alert('Registro exitoso. Ahora puedes iniciar sesion.');
+        alert('Registro exitoso. Ahora puedes iniciar sesión.');
         setMode('login');
         setRegisterData({
           numeroColegiado: '',
@@ -208,6 +218,55 @@ const Login: React.FC = () => {
   return (
     <div className="login-page">
       <div className="login-container">
+        {/* Mensaje de sesión expirada */}
+        {showSessionExpiredMessage && (
+          <div style={{
+            position: 'fixed',
+            top: '20px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            backgroundColor: '#ff6b6b',
+            color: 'white',
+            padding: '15px 30px',
+            borderRadius: '8px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            animation: 'slideDown 0.3s ease-out'
+          }}>
+            <i className="fas fa-exclamation-circle" style={{ fontSize: '20px' }}></i>
+            <span style={{ fontWeight: '500' }}>Tu sesión ha expirado. Por favor, inicia sesión nuevamente.</span>
+            <button 
+              onClick={() => setShowSessionExpiredMessage(false)}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'white',
+                cursor: 'pointer',
+                fontSize: '18px',
+                marginLeft: '10px'
+              }}
+            >
+              ×
+            </button>
+          </div>
+        )}
+
+        <style>{`
+          @keyframes slideDown {
+            from {
+              transform: translateX(-50%) translateY(-100%);
+              opacity: 0;
+            }
+            to {
+              transform: translateX(-50%) translateY(0);
+              opacity: 1;
+            }
+          }
+        `}</style>
+
         <div className="login-content">
           {/* Lado izquierdo - Información */}
           <div className="login-left">
@@ -238,7 +297,7 @@ const Login: React.FC = () => {
           {/* Lado derecho - Formularios */}
           <div className="login-right">
             <div className="login-header">
-              <h3>{mode === 'login' ? 'Iniciar Sesion' : 'Registrarse'}</h3>
+              <h3>{mode === 'login' ? 'Iniciar Sesión' : 'Registrarse'}</h3>
             </div>
 
             {/* Selector de modo */}
@@ -504,7 +563,7 @@ const Login: React.FC = () => {
                   className="btn-back"
                   onClick={() => setMode('login')}
                 >
-                  ¿Ya tienes cuenta? Inicia sesión
+                  ¿Ya tienes cuenta? Inicia sesion
                 </button>
               </form>
             )}

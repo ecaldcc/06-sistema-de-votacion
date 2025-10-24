@@ -18,7 +18,7 @@ import '../../styles/CampaignDetail.scss';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
-// ... (Las interfaces Campaign y Candidate no cambian) ...
+
 interface Candidate {
   _id: string;
   nombre: string;
@@ -326,7 +326,7 @@ const CampaignDetail: React.FC = () => {
                     </button>
                     {selectedCandidate && (
                     <p className="vote-hint">
-                        <i className="fas fa-info-circle"></i> Estás votando por:{' '}
+                        <i className="fas fa-info-circle"></i> Estas votando por:{' '}
                         <strong>{campaign.candidatos.find(c => c._id === selectedCandidate)?.nombre}</strong>
                     </p>
                     )}

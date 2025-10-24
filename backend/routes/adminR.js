@@ -10,13 +10,13 @@ import { authMiddleware, adminMiddleware } from '../middleware/auth-jwt.js';
 let broadcastToCampaign = null;
 let broadcastToAll = null;
 
-// Funcion para inyectar los broadcasts desde el servidor principal
+// Función para inyectar los broadcasts desde el servidor principal
 export const setBroadcastFunctions = (broadcastCampaignFn, broadcastAllFn) => {
   broadcastToCampaign = broadcastCampaignFn;
   broadcastToAll = broadcastAllFn;
 };
 
-// Todas las rutas requieren autenticacion y permisos de admin
+// Todas las rutas requieren autenticación y permisos de admin
 router.use(authMiddleware, adminMiddleware);
 
 // ========== GESTION DE CAMPAÑAS ==========
@@ -28,23 +28,23 @@ router.post('/campaigns', async (req, res) => {
       titulo,
       descripcion,
       votosDisponibles,
-      fechaInicio,
       fechaFin,
       candidatos
     } = req.body;
 
     // Validaciones
-    if (!titulo || !descripcion || !fechaInicio || !fechaFin) {
+    if (!titulo || !descripcion || !fechaFin) {
       return res.status(400).json({
         success: false,
         message: 'Todos los campos requeridos deben estar completos.'
       });
     }
 
-    if (new Date(fechaFin) <= new Date(fechaInicio)) {
+    // Validar que la fecha de fin sea futura
+    if (new Date(fechaFin) <= new Date()) {
       return res.status(400).json({
         success: false,
-        message: 'La fecha de fin debe ser posterior a la fecha de inicio.'
+        message: 'La fecha de fin debe ser futura.'
       });
     }
 
@@ -52,9 +52,11 @@ router.post('/campaigns', async (req, res) => {
       titulo,
       descripcion,
       votosDisponibles: votosDisponibles || 1,
-      fechaInicio: new Date(fechaInicio),
+      // fechaInicio se establece cuando se habilita
+      fechaInicio: null,
       fechaFin: new Date(fechaFin),
       candidatos: candidatos || [],
+      estado: 'deshabilitada', // Por defecto deshabilitada hasta que se active
       createdBy: req.userId
     });
 
@@ -75,7 +77,7 @@ router.post('/campaigns', async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: 'Campaña creada exitosamente.',
+      message: 'Campaña creada exitosamente. Habilítala para iniciar la votación.',
       campaign
     });
 
@@ -132,14 +134,12 @@ router.put('/campaigns/:id', async (req, res) => {
       });
     }
 
-    // Validar fechas si se actualizan
-    if (updates.fechaInicio && updates.fechaFin) {
-      if (new Date(updates.fechaFin) <= new Date(updates.fechaInicio)) {
-        return res.status(400).json({
-          success: false,
-          message: 'La fecha de fin debe ser posterior a la fecha de inicio.'
-        });
-      }
+    // Validar fecha de fin si se actualiza
+    if (updates.fechaFin && new Date(updates.fechaFin) <= new Date()) {
+      return res.status(400).json({
+        success: false,
+        message: 'La fecha de fin debe ser futura.'
+      });
     }
 
     const updatedCampaign = await Campaign.findByIdAndUpdate(
@@ -148,13 +148,13 @@ router.put('/campaigns/:id', async (req, res) => {
       { new: true, runValidators: true }
     );
 
-    // WEBSOCKET: Notificar actualizacion de campaña
+    // WEBSOCKET: Notificar actualización de campaña
     if (broadcastToCampaign) {
       broadcastToCampaign(id, 'campaign_updated', {
         campaignId: id,
         updates: updates
       });
-      console.log(` Broadcast: Campaña ${id} actualizada`);
+      console.log(`Broadcast: Campaña ${id} actualizada`);
     }
 
     res.json({
@@ -233,12 +233,7 @@ router.patch('/campaigns/:id/toggle', async (req, res) => {
       });
     }
 
-    const campaign = await Campaign.findByIdAndUpdate(
-      id,
-      { estado, updatedAt: new Date() },
-      { new: true }
-    );
-
+    const campaign = await Campaign.findById(id);
     if (!campaign) {
       return res.status(404).json({
         success: false,
@@ -246,21 +241,33 @@ router.patch('/campaigns/:id/toggle', async (req, res) => {
       });
     }
 
-    // WEBSOCKET: Notificar cambio de estado
+    // IMPORTANTE: Si se habilita por primera vez, establecer fechaInicio AHORA
+    if (estado === 'habilitada' && !campaign.fechaInicio) {
+      campaign.fechaInicio = new Date();
+      console.log(` Campaña ${id} habilitada. Fecha de inicio: ${campaign.fechaInicio}`);
+    }
+
+    campaign.estado = estado;
+    campaign.updatedAt = new Date();
+    await campaign.save();
+
+    //  WEBSOCKET: Notificar cambio de estado
     if (broadcastToCampaign && broadcastToAll) {
       // Notificar a los suscritos a la campaña específica
       broadcastToCampaign(id, 'campaign_toggled', {
         campaignId: id,
-        newState: estado
+        newState: estado,
+        fechaInicio: campaign.fechaInicio
       });
       
       // También notificar globalmente para actualizar listas
       broadcastToAll('campaign_toggled', {
         campaignId: id,
-        newState: estado
+        newState: estado,
+        fechaInicio: campaign.fechaInicio
       });
       
-      console.log(`Broadcast: Campaña ${id} cambió a estado ${estado}`);
+      console.log(` Broadcast: Campaña ${id} cambió a estado ${estado}`);
     }
 
     res.json({
@@ -420,7 +427,7 @@ router.delete('/campaigns/:campaignId/candidates/:candidateId', async (req, res)
     candidate.remove();
     await campaign.save();
 
-    // WEBSOCKET: Notificar eliminación de candidato
+    //  WEBSOCKET: Notificar eliminación de candidato
     if (broadcastToCampaign) {
       broadcastToCampaign(campaignId, 'campaign_updated', {
         campaignId,
@@ -529,7 +536,7 @@ router.get('/reports/campaign/:id', async (req, res) => {
   }
 });
 
-// ========== GESTIoN DE USUARIOS ==========
+// ========== GESTIÓN DE USUARIOS ==========
 
 // Obtener todos los votantes
 router.get('/users/voters', async (req, res) => {
@@ -572,7 +579,7 @@ router.patch('/users/:id/toggle', async (req, res) => {
       });
     }
 
-    //  WEBSOCKET: Notificar cambio de estado de usuario (opcional)
+    // WEBSOCKET: Notificar cambio de estado de usuario (opcional)
     if (broadcastToAll) {
       broadcastToAll('user_toggled', {
         userId: id,
