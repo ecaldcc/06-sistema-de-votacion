@@ -276,6 +276,12 @@ https://votacion-backend-w7t6.onrender.com
 
 
 ---
+## Enlace al Manual Tecnico
+https://drive.google.com/drive/folders/1gr56Ih2bEZAPQqnKao3ffmhNOPIO6Hu7?usp=sharing
+
+## Enlace al Manual de Usuario
+https://drive.google.com/drive/folders/1VyD1ORFHw93SdVxuCaThzd1qHznYgPd_?usp=sharing
+
 ##  Desarrollado por
 
 - Edwar Daniel Calderon Cinco 9490-20-26601
